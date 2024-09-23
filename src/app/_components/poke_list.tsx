@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { api } from "~/trpc/react";
 import PokemonCard from "./poke_card";
 import { BaseModal } from "~/ui/BaseModal";
+import Pagination from "~/ui/pagination";
 
 const ITEMS_PER_PAGE = 12;
 
 const PokemonList: React.FC = () => {
-  const [page, setPage] = useState(1);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
 
   const {
     data: pokemonList,
@@ -18,7 +20,7 @@ const PokemonList: React.FC = () => {
     error,
   } = api.pokemon.getList.useQuery({
     limit: ITEMS_PER_PAGE,
-    offset: (page - 1) * ITEMS_PER_PAGE,
+    offset: currentPageIndex * ITEMS_PER_PAGE,
     search: searchTerm,
   });
 
@@ -27,9 +29,15 @@ const PokemonList: React.FC = () => {
       enabled: false,
     });
 
+  useEffect(() => {
+    if (pokemonList) {
+      setTotalPages(currentPageIndex + (pokemonList.hasMore ? 2 : 1));
+    }
+  }, [pokemonList, currentPageIndex]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setPage(1);
+    setCurrentPageIndex(0);
   };
 
   const handleRandom = async () => {
@@ -90,22 +98,12 @@ const PokemonList: React.FC = () => {
         ))}
       </div>
 
-      <div className="mt-8 flex justify-center">
-        <button
-          onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-          disabled={page === 1}
-          className="mr-4 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => setPage((prev) => prev + 1)}
-          disabled={!pokemonList?.hasMore}
-          className="rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300"
-        >
-          Next
-        </button>
-      </div>
+      <Pagination
+        totalItemsCount={totalPages * ITEMS_PER_PAGE}
+        currentPageIndex={currentPageIndex}
+        itensPerPage={ITEMS_PER_PAGE}
+        setCurrentPageIndex={setCurrentPageIndex}
+      />
     </div>
   );
 };
